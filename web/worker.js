@@ -102,6 +102,69 @@ function predict(features) {
     }
 }
 
+// Make batch predictions
+function predictBatch(featuresBatch) {
+    try {
+        if (!model) {
+            throw new Error('Model not loaded');
+        }
+        
+        const startTime = performance.now();
+        
+        // Create vector of float feature vectors
+        const floatVectorVector = new catboostModule.FloatVectorVector();
+        featuresBatch.forEach(features => {
+            const floatVector = new catboostModule.FloatVector();
+            features.floatFeatures.forEach(f => floatVector.push_back(f));
+            floatVectorVector.push_back(floatVector);
+        });
+        
+        // Create vector of categorical feature vectors
+        const catVectorVector = new catboostModule.StringVectorVector();
+        featuresBatch.forEach(features => {
+            const catVector = new catboostModule.StringVector();
+            features.catFeatures.forEach(f => catVector.push_back(f));
+            catVectorVector.push_back(catVector);
+        });
+        
+        // Make batch prediction
+        const result = model.predictBatch(floatVectorVector, catVectorVector);
+        
+        // Convert result to array
+        const predictions = [];
+        for (let i = 0; i < result.size(); i++) {
+            predictions.push(result.get(i));
+        }
+        
+        const endTime = performance.now();
+        const processingTime = endTime - startTime;
+        
+        // Clean up - need to delete individual vectors first
+        for (let i = 0; i < floatVectorVector.size(); i++) {
+            floatVectorVector.get(i).delete();
+        }
+        floatVectorVector.delete();
+        
+        for (let i = 0; i < catVectorVector.size(); i++) {
+            catVectorVector.get(i).delete();
+        }
+        catVectorVector.delete();
+        
+        result.delete();
+        
+        postMessage({ 
+            type: 'batchPrediction', 
+            result: predictions,
+            processingTime: processingTime,
+            batchSize: featuresBatch.length
+        });
+        
+    } catch (error) {
+        console.error('Batch prediction failed:', error);
+        postMessage({ type: 'error', message: 'Batch prediction failed: ' + error.message });
+    }
+}
+
 // Handle messages from main thread
 self.onmessage = async function(e) {
     const { type, data } = e.data;
@@ -117,6 +180,10 @@ self.onmessage = async function(e) {
             
         case 'predict':
             predict(data);
+            break;
+            
+        case 'predictBatch':
+            predictBatch(data);
             break;
             
         default:

@@ -117,6 +117,82 @@ public:
         
         return result;
     }
+    
+    std::vector<double> predictBatch(
+        const std::vector<std::vector<float>>& floatFeaturesBatch,
+        const std::vector<std::vector<std::string>>& catFeaturesBatch
+    ) {
+        if (!model) {
+            throw std::runtime_error("Model not loaded");
+        }
+        
+        size_t docCount = floatFeaturesBatch.size();
+        if (docCount == 0) {
+            return std::vector<double>();
+        }
+        
+        // Validate batch sizes match
+        if (catFeaturesBatch.size() != docCount) {
+            throw std::runtime_error("Float and categorical feature batch sizes don't match");
+        }
+        
+        size_t floatFeatureCount = getFloatFeatureCount();
+        size_t catFeatureCount = getCatFeatureCount();
+        
+        // Validate all feature counts
+        for (size_t i = 0; i < docCount; ++i) {
+            if (floatFeaturesBatch[i].size() != floatFeatureCount) {
+                throw std::runtime_error("Invalid float feature count at index " + std::to_string(i));
+            }
+            if (catFeaturesBatch[i].size() != catFeatureCount) {
+                throw std::runtime_error("Invalid categorical feature count at index " + std::to_string(i));
+            }
+        }
+        
+        // Prepare float features array of pointers
+        std::vector<const float*> floatPtrs;
+        floatPtrs.reserve(docCount);
+        for (const auto& features : floatFeaturesBatch) {
+            floatPtrs.push_back(features.data());
+        }
+        
+        // Prepare categorical features array of arrays of pointers
+        std::vector<std::vector<const char*>> catPtrsVec;
+        catPtrsVec.reserve(docCount);
+        for (const auto& catFeatures : catFeaturesBatch) {
+            std::vector<const char*> catPtrs;
+            catPtrs.reserve(catFeatureCount);
+            for (const auto& cat : catFeatures) {
+                catPtrs.push_back(cat.c_str());
+            }
+            catPtrsVec.push_back(std::move(catPtrs));
+        }
+        
+        // Create array of pointers to categorical feature arrays
+        std::vector<const char**> catPtrsPtrs;
+        catPtrsPtrs.reserve(docCount);
+        for (const auto& catPtrs : catPtrsVec) {
+            catPtrsPtrs.push_back(catPtrs.data());
+        }
+        
+        // Allocate result array
+        std::vector<double> result(docCount);
+        
+        // Make batch prediction
+        bool success = CalcModelPrediction(
+            model,
+            docCount,
+            floatPtrs.data(), floatFeatureCount,
+            catPtrsPtrs.data(), catFeatureCount,
+            result.data(), result.size()
+        );
+        
+        if (!success) {
+            throw std::runtime_error("Batch prediction failed: " + getLastError());
+        }
+        
+        return result;
+    }
 };
 
 // Emscripten bindings
@@ -127,6 +203,8 @@ EMSCRIPTEN_BINDINGS(catboost_module) {
     register_vector<float>("FloatVector");
     register_vector<std::string>("StringVector");
     register_vector<double>("DoubleVector");
+    register_vector<std::vector<float>>("FloatVectorVector");
+    register_vector<std::vector<std::string>>("StringVectorVector");
     
     class_<CatBoostModel>("CatBoostModel")
         .constructor<>()
@@ -135,5 +213,6 @@ EMSCRIPTEN_BINDINGS(catboost_module) {
         .function("getFloatFeatureCount", &CatBoostModel::getFloatFeatureCount)
         .function("getCatFeatureCount", &CatBoostModel::getCatFeatureCount)
         .function("getTreeCount", &CatBoostModel::getTreeCount)
-        .function("predict", &CatBoostModel::predict);
+        .function("predict", &CatBoostModel::predict)
+        .function("predictBatch", &CatBoostModel::predictBatch);
 }
