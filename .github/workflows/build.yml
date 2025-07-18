@@ -1,0 +1,85 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Install Python dependencies
+      run: |
+        pip install catboost pandas numpy
+    
+    - name: Setup Emscripten
+      uses: mymindstorm/setup-emsdk@v12
+      with:
+        version: 'latest'
+    
+    - name: Verify Emscripten
+      run: |
+        emcc --version
+        
+    - name: Create demo model
+      run: |
+        python create_model.py
+        
+    - name: Build WebAssembly module
+      run: |
+        mkdir -p build
+        cd build
+        emcmake cmake .. -DCMAKE_BUILD_TYPE=Release
+        emmake make -j2
+        
+    - name: List build artifacts
+      run: |
+        ls -la web/
+        
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: wasm-build
+        path: |
+          web/
+          models/
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Download artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: wasm-build
+        
+    - name: Setup Pages
+      uses: actions/configure-pages@v3
+        
+    - name: Upload to Pages
+      uses: actions/upload-pages-artifact@v2
+      with:
+        path: web/
+        
+    - name: Deploy to Pages
+      id: deployment
+      uses: actions/deploy-pages@v2
