@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CatBoost WASM Test</title>
+</head>
+<body>
+    <h1>CatBoost WebAssembly Test</h1>
+    <div id="status">Loading...</div>
+    <button id="testBtn" disabled>Run Test</button>
+    <pre id="output"></pre>
+
+    <script>
+        let Module;
+        
+        async function loadWasm() {
+            try {
+                document.getElementById('status').textContent = 'Loading WebAssembly module...';
+                
+                Module = await CatBoostModule();
+                
+                document.getElementById('status').textContent = 'Module loaded successfully!';
+                document.getElementById('testBtn').disabled = false;
+                
+                console.log('Module loaded:', Module);
+                
+            } catch (error) {
+                document.getElementById('status').textContent = 'Error: ' + error.message;
+                console.error('Failed to load module:', error);
+            }
+        }
+        
+        function runTest() {
+            try {
+                const output = document.getElementById('output');
+                output.textContent = '';
+                
+                // Create model instance
+                const model = new Module.CatBoostModel();
+                output.textContent += 'Model instance created\n';
+                
+                // Create mock model data (in real usage, this would be loaded from file)
+                const modelData = new Module.Uint8Vector();
+                for (let i = 0; i < 100; i++) {
+                    modelData.push_back(i % 256);
+                }
+                
+                // Load model
+                const loaded = model.loadModel(modelData);
+                output.textContent += 'Model load result: ' + loaded + '\n';
+                
+                if (!loaded) {
+                    output.textContent += 'Error: ' + model.getLastError() + '\n';
+                } else {
+                    // Get model info
+                    output.textContent += 'Float features: ' + model.getFloatFeatureCount() + '\n';
+                    output.textContent += 'Categorical features: ' + model.getCatFeatureCount() + '\n';
+                    output.textContent += 'Tree count: ' + model.getTreeCount() + '\n';
+                    
+                    // Make a prediction
+                    const floatFeatures = new Module.FloatVector();
+                    floatFeatures.push_back(35);    // age
+                    floatFeatures.push_back(80000); // income
+                    floatFeatures.push_back(45);    // hours_per_week
+                    
+                    const catFeatures = new Module.StringVector();
+                    catFeatures.push_back("Masters");
+                    catFeatures.push_back("Tech");
+                    catFeatures.push_back("Married");
+                    
+                    const result = model.predict(floatFeatures, catFeatures);
+                    output.textContent += '\nPrediction result: ' + result.get(0) + '\n';
+                    
+                    // Clean up
+                    floatFeatures.delete();
+                    catFeatures.delete();
+                    result.delete();
+                }
+                
+                // Clean up
+                modelData.delete();
+                model.delete();
+                
+                output.textContent += '\nTest completed successfully!';
+                
+            } catch (error) {
+                document.getElementById('output').textContent = 'Error: ' + error.toString();
+                console.error('Test failed:', error);
+            }
+        }
+        
+        document.getElementById('testBtn').addEventListener('click', runTest);
+        
+        // Load the module
+        loadWasm();
+    </script>
+    
+    <script src="catboost_wasm.js"></script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+# Build directories
+build/
+cmake-build-*/
+
+# Generated files
+web/*.wasm
+web/*.data
+web/*.mem
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.env
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# Model files (optional - remove this if you want to commit models)
+# *.cbm
+
+# Server PID files
+*.pid

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CatBoost WebAssembly Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .container {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        h1 {
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: inline-block;
+            width: 150px;
+            font-weight: bold;
+        }
+        input, select {
+            padding: 5px;
+            width: 200px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e9ecef;
+            border-radius: 4px;
+            display: none;
+        }
+        .error {
+            color: red;
+        }
+        .success {
+            color: green;
+        }
+        #loading {
+            display: none;
+            color: #666;
+        }
+        .model-info {
+            margin-top: 20px;
+            padding: 10px;
+            background: #d4edda;
+            border-radius: 4px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>CatBoost WebAssembly Demo</h1>
+        <p>This demo shows CatBoost model inference running entirely in your browser using WebAssembly.</p>
+        
+        <div class="form-group">
+            <label>Model File:</label>
+            <input type="file" id="modelFile" accept=".cbm">
+            <button id="loadModel">Load Model</button>
+        </div>
+        
+        <div id="modelInfo" class="model-info">
+            <h3>Model Information</h3>
+            <p>Trees: <span id="treeCount">-</span></p>
+            <p>Float Features: <span id="floatFeatureCount">-</span></p>
+            <p>Categorical Features: <span id="catFeatureCount">-</span></p>
+        </div>
+        
+        <h2>Make Prediction</h2>
+        
+        <h3>Numerical Features</h3>
+        <div class="form-group">
+            <label for="age">Age:</label>
+            <input type="number" id="age" value="35" min="18" max="100">
+        </div>
+        
+        <div class="form-group">
+            <label for="income">Income:</label>
+            <input type="number" id="income" value="80000" min="0" max="500000">
+        </div>
+        
+        <div class="form-group">
+            <label for="hoursPerWeek">Hours per Week:</label>
+            <input type="number" id="hoursPerWeek" value="45" min="0" max="100">
+        </div>
+        
+        <h3>Categorical Features</h3>
+        <div class="form-group">
+            <label for="education">Education:</label>
+            <select id="education">
+                <option value="HS-grad">HS-grad</option>
+                <option value="Bachelors">Bachelors</option>
+                <option value="Masters" selected>Masters</option>
+                <option value="Doctorate">Doctorate</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="occupation">Occupation:</label>
+            <select id="occupation">
+                <option value="Tech" selected>Tech</option>
+                <option value="Sales">Sales</option>
+                <option value="Service">Service</option>
+                <option value="Admin">Admin</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="maritalStatus">Marital Status:</label>
+            <select id="maritalStatus">
+                <option value="Single">Single</option>
+                <option value="Married" selected>Married</option>
+                <option value="Divorced">Divorced</option>
+            </select>
+        </div>
+        
+        <button id="predictBtn" disabled>Predict</button>
+        <span id="loading">Processing...</span>
+        
+        <div id="result"></div>
+    </div>
+    
+    <script src="main.js"></script>
+</body>
+</html>
